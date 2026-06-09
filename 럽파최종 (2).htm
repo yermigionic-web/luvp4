@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Love Paranoia</title>
+
+<!-- =========================================================
+     외부 폰트 : 한국어/영어가 모두 같은 무드(그리스풍 세리프 + 청량/공포)
+     - Cinzel        : 라틴 디스플레이(신전풍 대문자)
+     - Song Myung    : 한글 우아한 세리프(디스플레이)
+     - Gowun Batang  : 한글 본문 세리프
+     - EB Garamond   : 라틴 본문 세리프
+     - Share Tech Mono : 뉴스/글리치/라벨용 모노
+     ========================================================= -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;800&family=Song+Myung&family=Gowun+Batang:wght@400;700&family=EB+Garamond:ital@0;1&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+<style>
+/* =========================================================================
+   0. 전역 토큰 / 리셋
+   ========================================================================= */
+:root{
+  --ink:#04101f;          /* 거의 검정(심해) */
+  --deep:#06182e;         /* 심해 청 */
+  --navy:#0d2a4a;
+  --blue:#1f5f9e;
+  --azure:#3f9fd0;
+  --aqua:#7ad7e8;
+  --foam:#eaf6fb;         /* 거품 흰 */
+  --white:#ffffff;
+  --pastel-red:#e8788a;   /* 파스텔 레드(공포 포인트) */
+  --blood:#c63a4d;        /* 핏빛 */
+  --glitch:#ff2d44;       /* 글리치 레드 */
+  --glitch-cy:#33e7ff;    /* 글리치 시안 */
+
+  --font-disp:'Cinzel','Song Myung',serif;
+  --font-kr:'Gowun Batang','EB Garamond',serif;
+  --font-body:'EB Garamond','Gowun Batang',serif;
+  --font-mono:'Share Tech Mono','Gowun Batang',monospace;
+
+  --shadow-soft:0 18px 50px -20px rgba(4,16,31,.7);
+}
+
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;}
+body{
+  background:var(--ink);
+  color:var(--foam);
+  font-family:var(--font-body);
+  overflow:hidden;
+  position:fixed;inset:0;
+  text-rendering:optimizeLegibility;
+  -webkit-font-smoothing:antialiased;
+}
+img{display:block;max-width:100%;}
+button{font-family:inherit;color:inherit;background:none;border:none;cursor:pointer;}
+
+/* 화면 공통 : 한 번에 하나만 활성 */
+.screen{
+  position:fixed;inset:0;
+  opacity:0;visibility:hidden;
+  transition:opacity .6s ease;
+  z-index:1;
+}
+.screen.active{opacity:1;visibility:visible;z-index:5;}
+
+/* 미세한 필름 그레인 + 비네팅(전 화면 공통 분위기) */
+.screen::after{
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:60;
+  background:
+    radial-gradient(120% 90% at 50% 10%,transparent 55%,rgba(4,16,31,.55) 100%);
+  mix-blend-mode:multiply;
+}
+.grain{
+  position:fixed;inset:-50%;pointer-events:none;z-index:900;opacity:.06;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  animation:grain .6s steps(2) infinite;
+}
+@keyframes grain{
+  0%{transform:translate(0,0)}50%{transform:translate(-4%,3%)}100%{transform:translate(3%,-2%)}
+}
+
+/* 가끔 화면 전체에 스치는 핏빛 글리치 (JS가 .glitch-flash 토글) */
+.glitch-flash{
+  position:fixed;inset:0;pointer-events:none;z-index:950;opacity:0;
+  background:linear-gradient(180deg,transparent,rgba(255,45,68,.12),transparent);
+  mix-blend-mode:screen;
+}
+.glitch-flash.on{animation:gflash .42s steps(3) 1;}
+@keyframes gflash{
+  0%{opacity:0;transform:translateY(0)}
+  20%{opacity:1;transform:translateY(-6px) skewX(-2deg)}
+  45%{opacity:.3;transform:translateX(8px)}
+  70%{opacity:.9;transform:translateX(-6px) skewX(1deg)}
+  100%{opacity:0}
+}
+
+/* =========================================================================
+   1. 메인 화면
+   ========================================================================= */
+#main{
+  background:
+    radial-gradient(140% 120% at 50% -10%, #2a6fa8 0%, var(--deep) 48%, var(--ink) 100%);
+}
+/* 햇살(scattered light)이 위에서 내려오는 청량한 분위기 */
+#main .sunrays{
+  position:absolute;inset:0;z-index:1;pointer-events:none;opacity:.5;
+  background:
+    conic-gradient(from 200deg at 50% -20%,
+      transparent 0deg, rgba(234,246,251,.12) 14deg, transparent 28deg,
+      rgba(234,246,251,.10) 42deg, transparent 56deg,
+      rgba(234,246,251,.14) 72deg, transparent 90deg);
+  mix-blend-mode:screen;
+  animation:rayDrift 14s ease-in-out infinite alternate;
+}
+@keyframes rayDrift{from{transform:translateX(-3%) rotate(-2deg)}to{transform:translateX(3%) rotate(2deg)}}
+
+.main-center{
+  position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);
+  z-index:10;width:min(86vw,460px);text-align:center;
+}
+/* ---- 로고 (링크 제공됨, 실제 삽입) ---- */
+.logo-wrap{position:relative;margin-bottom:7vh;}
+.logo-wrap img{
+  width:74%;margin:0 auto;filter:drop-shadow(0 10px 30px rgba(4,16,31,.6));
+  animation:logoFloat 5s ease-in-out infinite;
+}
+@keyframes logoFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+/* 로고 로딩 실패 시 텍스트 폴백 */
+.logo-fallback{
+  display:none;font-family:var(--font-disp);font-weight:800;
+  font-size:clamp(40px,16vw,90px);letter-spacing:.18em;color:var(--foam);
+  text-shadow:0 0 24px rgba(122,215,232,.5);
+}
+.logo-fallback small{display:block;font-family:var(--font-mono);font-size:.18em;letter-spacing:.6em;color:var(--aqua);margin-top:.4em;}
+
+/* ---- 스타트 버튼 ---- */
+.start-btn{
+  position:relative;display:inline-flex;align-items:center;gap:.9em;
+  padding:.85em 2.4em;border:1px solid rgba(234,246,251,.55);
+  border-radius:60px;font-family:var(--font-mono);letter-spacing:.45em;
+  font-size:clamp(13px,3.4vw,16px);color:var(--foam);
+  background:rgba(8,26,46,.35);backdrop-filter:blur(6px);
+  text-transform:uppercase;overflow:hidden;
+  box-shadow:0 0 0 0 rgba(122,215,232,.35);
+  animation:btnPulse 2.6s ease-in-out infinite;
+}
+.start-btn span{position:relative;z-index:2;padding-left:.45em;}
+.start-btn::before{content:"▶";font-size:.7em;opacity:.85;}
+.start-btn::after{ /* 글리치 레드 라인 */
+  content:"";position:absolute;inset:0;z-index:1;opacity:0;
+  background:linear-gradient(90deg,transparent,rgba(255,45,68,.5),transparent);
+}
+.start-btn:hover::after,.start-btn:active::after{animation:btnGlitch .5s steps(4);}
+@keyframes btnGlitch{0%{opacity:.9;transform:translateX(-30%)}100%{opacity:0;transform:translateX(60%)}}
+@keyframes btnPulse{0%,100%{box-shadow:0 0 0 0 rgba(122,215,232,.0)}50%{box-shadow:0 0 26px 2px rgba(122,215,232,.35)}}
+
+/* ---- 하단 파도 (푸른 물결 + 흰 거품, 밀려왔다 밀려감) ---- */
+.waves{position:absolute;left:0;right:0;bottom:0;height:46%;z-index:4;overflow:hidden;}
+.waves svg{position:absolute;left:-25%;bottom:0;width:150%;height:100%;}
+.wave-layer{transform-origin:bottom;}
+.wl1{fill:rgba(31,95,158,.55);animation:waveRoll 11s linear infinite, waveBob 6s ease-in-out infinite;}
+.wl2{fill:rgba(63,159,208,.5);animation:waveRoll 8s linear infinite reverse, waveBob 5s ease-in-out infinite;}
+.wl3{fill:rgba(122,215,232,.45);animation:waveRoll 6s linear infinite, waveBob 4s ease-in-out infinite;}
+.foam{fill:rgba(234,246,251,.9);animation:waveRoll 5s linear infinite reverse, foamBreathe 3.4s ease-in-out infinite;}
+@keyframes waveRoll{from{transform:translateX(0)}to{transform:translateX(-33.33%)}}
+@keyframes waveBob{0%,100%{transform:translateY(6px)}50%{transform:translateY(-10px)}}
+@keyframes foamBreathe{0%,100%{transform:translateY(2px) scaleY(1)}50%{transform:translateY(-6px) scaleY(1.08)}}
+
+/* ---- 스타트 시 : 파도가 차오르며 최하단부터 붉게 물들고 → 암전 ---- */
+.wave-rise{
+  position:fixed;left:0;right:0;bottom:0;height:0;z-index:800;pointer-events:none;
+  background:linear-gradient(180deg, var(--azure) 0%, var(--blue) 40%, var(--pastel-red) 100%);
+}
+.wave-rise .crest{position:absolute;top:-1px;left:-25%;width:150%;height:60px;}
+.wave-rise .crest path{fill:var(--azure);animation:waveRoll 3s linear infinite;}
+.wave-rise.go{animation:riseUp 2.2s cubic-bezier(.6,.0,.3,1) forwards;}
+@keyframes riseUp{0%{height:0}70%{height:120vh}100%{height:120vh}}
+.black-fade{position:fixed;inset:0;z-index:850;background:#000;opacity:0;pointer-events:none;}
+.black-fade.go{animation:toBlack 1s ease 1.6s forwards;}
+@keyframes toBlack{to{opacity:1}}
+
+/* =========================================================================
+   2. 스토리 페이지 — (a) 뉴스 데스크 목업
+   ========================================================================= */
+#story{background:#02101e;}
+/* 뉴스 화면 영역(여기에 이미지가 들어감) + 아날로그 글리치 50% */
+.news-screen{
+  position:absolute;inset:0 0 32% 0;z-index:1;overflow:hidden;
+  /* >>> IMAGE: 뉴스 배경 영상/이미지. CSS background-image 또는 <img>로 교체.
+       예) background-image:url('news_bg.png'); <<< */
+  background:
+    repeating-linear-gradient(0deg, rgba(255,255,255,.025) 0 2px, transparent 2px 4px),
+    linear-gradient(160deg,#0b2c47,#04141f);
+}
+.news-screen::before{ /* 주사선 + 아날로그 노이즈 글리치 (약 50% 강도) */
+  content:"";position:absolute;inset:0;
+  background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='2'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='.5'/></svg>");
+  mix-blend-mode:overlay;opacity:.5;animation:noiseShift .25s steps(3) infinite;
+}
+.news-screen::after{ /* 가로 글리치 밴드 */
+  content:"";position:absolute;left:0;right:0;height:14%;
+  background:linear-gradient(90deg,transparent,rgba(255,45,68,.18),rgba(51,231,255,.18),transparent);
+  mix-blend-mode:screen;animation:bandSlide 4.5s ease-in-out infinite;
+}
+@keyframes noiseShift{to{transform:translate(2%,1%)}}
+@keyframes bandSlide{0%{top:-15%}50%{top:80%}100%{top:-15%}}
+.news-screen .img-note{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  font-family:var(--font-mono);font-size:12px;letter-spacing:.2em;color:rgba(234,246,251,.35);
+  text-align:center;pointer-events:none;
+}
+
+/* 방송 하단 자막(news desk lower-third) */
+/* 방송 하단 자막(news desk lower-third) */
+.news-deck {
+  position: absolute;
+  left: 0;
+  right: 0;
+  
+  /* [수정] 화면 맨 아래(bottom:0) 대신, 이미지 영역이 끝나는 68% 지점으로 위치 고정 */
+  top: 68%; 
+  
+  z-index: 6;
+  
+  /* [수정] 자막이 위로 올라왔으므로, 모바일 하단 여백(safe-area-inset-bottom)은 제거하고 깔끔하게 패딩 조절 */
+  padding: 18px 16px 20px; 
+  
+  /* [추천] 그라데이션 방향을 위가 아니라 아래로 향하게 바꾸면 이미지와 자연스럽게 연결돼 */
+  background: linear-gradient(180deg, #02101e 65%, rgba(2,16,30,0));
+}-tag{
+  display:inline-flex;align-items:center;gap:.6em;font-family:var(--font-mono);
+  font-size:12px;letter-spacing:.25em;color:var(--white);
+  background:var(--blood);padding:.4em .9em;border-radius:3px;margin-bottom:10px;
+  animation:livePulse 1.4s steps(2) infinite;
+}
+.news-tag::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--white);}
+@keyframes livePulse{50%{filter:brightness(1.4)}}
+.news-box{
+  border-left:3px solid var(--azure);padding:4px 0 4px 16px;min-height:84px;
+}
+.news-box .headline{
+  font-family:var(--font-kr);font-weight:700;font-size:clamp(17px,4.8vw,22px);
+  line-height:1.5;color:var(--foam);
+  text-shadow:0 1px 0 rgba(0,0,0,.4);
+}
+.news-box .sub{margin-top:8px;font-family:var(--font-mono);font-size:12px;color:var(--aqua);letter-spacing:.08em;}
+.news-progress{position:absolute;left:0;bottom:0;height:3px;background:var(--azure);width:0;}
+.news-progress.run{animation:newsBar 4s linear forwards;}
+@keyframes newsBar{from{width:0}to{width:100%}}
+.news-skip{position:absolute;right:16px;top:14px;font-family:var(--font-mono);font-size:11px;letter-spacing:.2em;color:rgba(234,246,251,.5);}
+/* 자막 글리치 인 */
+.news-box.in .headline{animation:rgbIn .5s steps(3);}
+@keyframes rgbIn{
+  0%{text-shadow:-3px 0 var(--glitch),3px 0 var(--glitch-cy);transform:translateX(-2px)}
+  60%{text-shadow:2px 0 var(--glitch),-2px 0 var(--glitch-cy)}
+  100%{text-shadow:0 1px 0 rgba(0,0,0,.4);transform:none}
+}
+
+/* =========================================================================
+   2. 스토리 페이지 — (b) 쇼트 애니메이션
+   ========================================================================= */
+#anim{background:#000;}
+.anim-stage{position:absolute;inset:0;overflow:hidden;}
+
+/* [수정] 모든 프레임은 화면 전체를 꽉 채우도록 기본 설정 */
+.frame{
+  position:absolute;inset:0;opacity:0;
+  display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,#0a2740,#04121f);
+  overflow:hidden;
+}
+
+/* [수정] 이미지가 들어오는 순간, 기존 임시 가이드 박스([FRAME 1] 등)와 빗금 패턴은 완전히 숨김 */
+.frame .slot{
+  display:none !important;
+}
+
+/* [추가] 깃허브에서 불러온 이미지들이 화면을 찌그러짐 없이 꽉 채우도록 정렬 */
+.slot-img {
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:cover; /* 비율을 유지하면서 화면에 꽉 차게 */
+  z-index:1;        /* 배경 위에 위치 */
+}
+
+.frame.show{opacity:1;}
+
+/* ==========================================
+   전반 7장 : light ray / scattered light 장식 
+   ========================================== */
+.frame.hero .rays{
+  position:absolute;inset:0;pointer-events:none;mix-blend-mode:screen;opacity:.0;
+  background:
+    conic-gradient(from 220deg at 30% 0%, transparent 0deg, rgba(234,246,251,.18) 10deg, transparent 22deg,
+                   rgba(122,215,232,.16) 40deg, transparent 60deg);
+  z-index:2; /* [수정] 빛줄기가 이미지(z-index:1) 위로 예쁘게 덮이도록 순서 조정 */
+}
+.frame.hero.show .rays{animation:raySweep 3s ease-in-out forwards;}
+@keyframes raySweep{0%{opacity:0;transform:translateX(-6%) scale(1.1)}30%{opacity:.9}100%{opacity:.5;transform:translateX(6%) scale(1)}}
+.frame.hero.show{animation:heroZoom 3s ease forwards;}
+@keyframes heroZoom{0%{opacity:0;transform:scale(1.08)}12%{opacity:1}88%{opacity:1}100%{opacity:0;transform:scale(1)}}
+
+/* ==========================================
+   후반 18장 : 2장 1쌍 (일상 + 비일상 글리치 오버레이) 
+   ========================================== */
+.pair{position:absolute;inset:0;}
+.pair .daily{position:absolute;inset:0;overflow:hidden;}
+
+/* 두 번째(비일상) : 글리치처럼 사이사이 끼어듦 + 핏빛/어둠 */
+.pair .uncanny{ 
+  position:absolute;inset:0;opacity:0;mix-blend-mode:normal;
+  filter:brightness(.6) saturate(1.3) hue-rotate(-20deg);
+  z-index:2; /* [추가] 일상 이미지 위로 덮이도록 순서 보장 */
+  overflow:hidden;
+}
+.pair .uncanny::after{
+  content:"";position:absolute;inset:0;background:rgba(198,58,77,.28);mix-blend-mode:multiply;
+  z-index:3; /* [추가] 붉은 오버레이 색감이 이미지 위에 정확히 얹히도록 */
+}
+
+.pair.run .daily{animation:dailyShow 5s ease forwards;}
+.pair.run .uncanny{animation:uncannyGlitch 5s steps(20) forwards;}
+
+@keyframes dailyShow{0%{opacity:0}8%{opacity:1}92%{opacity:1}100%{opacity:0}}
+
+/* 초반 1초(=20%) 미노출 → 후반 2초(60~100%) 점진적으로 길게/자주 */
+@keyframes uncannyGlitch{
+  0%,20%{opacity:0;clip-path:inset(0 0 100% 0)}
+  24%{opacity:1;clip-path:inset(40% 0 50% 0)}26%{opacity:0}
+  40%{opacity:1;clip-path:inset(70% 0 10% 0);transform:translateX(4px)}42%{opacity:0}
+  58%{opacity:1;clip-path:inset(20% 0 60% 0);transform:translateX(-6px)}61%{opacity:0}
+  70%{opacity:1;clip-path:inset(0 0 30% 0)}74%{opacity:.2}
+  82%{opacity:1;clip-path:inset(0)}86%{opacity:.5}
+  92%{opacity:1;clip-path:inset(0);transform:none}
+  100%{opacity:1}
+}
+
+/* 팝업이 떠 있는 동안 애니메이션 정지 */
+.anim-stage.paused *{animation-play-state:paused !important;}
+/* ---- 스킵 확인 팝업 ---- */
+.modal{
+  position:absolute;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;
+  padding:24px;opacity:0;visibility:hidden;transition:opacity .3s;
+  background:rgba(2,12,24,.62);backdrop-filter:blur(7px);
+}
+.modal.open{opacity:1;visibility:visible;}
+.modal-card{
+  position:relative;width:min(88vw,360px);padding:30px 26px 26px;text-align:center;
+  border-radius:16px;border:1px solid rgba(234,246,251,.28);
+  background:linear-gradient(165deg,rgba(31,95,158,.5),rgba(6,24,46,.92));
+  box-shadow:0 24px 60px -18px rgba(0,0,0,.8), inset 0 0 0 1px rgba(122,215,232,.15);
+  transform:translateY(14px) scale(.96);transition:transform .35s cubic-bezier(.2,.8,.2,1);
+  overflow:hidden;
+}
+.modal.open .modal-card{transform:none;}
+/* 상단 주사선 + 거품 라인 */
+.modal-card::before{content:"";position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(0deg,rgba(255,255,255,.04) 0 2px,transparent 2px 4px);opacity:.5;}
+.modal-card::after{content:"";position:absolute;left:0;right:0;top:0;height:3px;
+  background:linear-gradient(90deg,transparent,var(--aqua),var(--blood),transparent);}
+.modal-title{
+  font-family:var(--font-disp);font-weight:800;font-size:34px;letter-spacing:.32em;
+  color:var(--foam);margin-bottom:4px;position:relative;
+}
+/* 핏빛 글리치 RGB 스플릿 */
+.modal-title::before,.modal-title::after{
+  content:attr(data-text);position:absolute;left:0;right:0;top:0;
+}
+.modal-title::before{color:var(--glitch);animation:mTitle 2.4s steps(8) infinite;}
+.modal-title::after{color:var(--glitch-cy);animation:mTitle 2.4s steps(8) infinite reverse;}
+@keyframes mTitle{0%,82%,100%{transform:none;opacity:0}84%{opacity:.7;transform:translateX(-3px)}90%{transform:translateX(3px)}96%{transform:translateX(-2px);opacity:.5}}
+.modal-q{font-family:var(--font-kr);font-size:17px;line-height:1.6;color:var(--foam);margin:6px 0 24px;position:relative;}
+.modal-btns{display:flex;gap:12px;position:relative;}
+.m-btn{
+  flex:1;padding:14px 6px;border-radius:10px;border:1px solid rgba(234,246,251,.25);
+  background:rgba(8,26,46,.4);transition:.2s;
+}
+.m-btn span{display:block;font-family:var(--font-kr);font-weight:700;font-size:16px;color:var(--foam);}
+.m-btn small{display:block;font-family:var(--font-mono);font-size:10px;letter-spacing:.22em;margin-top:3px;opacity:.65;}
+.m-btn:active{transform:scale(.96);}
+/* 예(스킵) = 핏빛 / 아니오(계속) = 청량 */
+.m-btn.yes{border-color:rgba(198,58,77,.6);}
+.m-btn.yes:hover,.m-btn.yes:active{background:rgba(198,58,77,.28);box-shadow:0 0 18px rgba(255,45,68,.35);}
+.m-btn.no{border-color:rgba(122,215,232,.6);}
+.m-btn.no:hover,.m-btn.no:active{background:rgba(63,159,208,.3);box-shadow:0 0 18px rgba(122,215,232,.4);}
+
+/* =========================================================================
+   3. 코덱스(캐릭터 + 세계관) 공통
+   ========================================================================= */
+#codex{
+  background:
+    radial-gradient(120% 90% at 50% 0%, #4f9fc8 0%, #1f6296 38%, var(--deep) 100%);
+  color:var(--ink);
+}
+/* 청량한 바닷가 : 상단 햇살 + 하단 잔물결 */
+#codex .beach-rays{position:absolute;inset:0;z-index:0;pointer-events:none;opacity:.4;mix-blend-mode:screen;
+  background:conic-gradient(from 210deg at 50% -10%,transparent 0deg,rgba(255,255,255,.2) 12deg,transparent 26deg,rgba(255,255,255,.15) 46deg,transparent 70deg);}
+.codex-inner{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;}
+
+/* 책갈피형 탭(우측 리본) */
+.bookmarks{position:absolute;top:14px;right:0;z-index:30;display:flex;flex-direction:column;gap:8px;}
+.bm{
+  writing-mode:vertical-rl;text-orientation:mixed;
+  padding:16px 8px;border-radius:10px 0 0 10px;font-family:var(--font-disp);
+  font-size:13px;letter-spacing:.3em;color:var(--foam);
+  background:linear-gradient(180deg,var(--navy),var(--deep));
+  box-shadow:var(--shadow-soft);opacity:.7;transform:translateX(6px);
+  transition:.3s;border:1px solid rgba(234,246,251,.15);border-right:none;
+}
+.bm .kr{writing-mode:vertical-rl;font-family:var(--font-kr);font-size:11px;letter-spacing:.1em;opacity:.7;}
+.bm.active{opacity:1;transform:translateX(0);background:linear-gradient(180deg,var(--azure),var(--blue));box-shadow:0 0 22px rgba(122,215,232,.5);}
+
+.tabview{flex:1;overflow:hidden;position:relative;}
+.tabpane{position:absolute;inset:0;opacity:0;visibility:hidden;transition:opacity .45s;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.tabpane.active{opacity:1;visibility:visible;}
+
+/* ---------- 캐릭터 탭 : 종족 캐러셀 ---------- */
+.codex-head{padding:26px 22px 6px;}
+.codex-head .eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.4em;color:var(--aqua);}
+.codex-head h1{font-family:var(--font-disp);font-weight:800;font-size:clamp(26px,8vw,42px);color:var(--foam);letter-spacing:.06em;line-height:1;margin-top:6px;}
+.codex-head h1 .kr{display:block;font-family:var(--font-kr);font-size:.42em;letter-spacing:.2em;color:rgba(234,246,251,.7);margin-top:.5em;}
+
+.carousel{position:relative;height:46vh;min-height:300px;perspective:1100px;margin-top:8px;}
+
+.race-card{
+  position:absolute;top:50%;left:50%;width:54vw;max-width:260px;height:38vh;min-height:230px;
+  transform:translate(-50%,-50%);transition:transform .55s cubic-bezier(.4,.0,.2,1),opacity .55s,filter .55s;
+  border-radius:18px;overflow:hidden;cursor:pointer;will-change:transform;
+  box-shadow:var(--shadow-soft);border:1px solid rgba(255,255,255,.2);
+}
+
+/* [수정] 자바스크립트 이미지가 들어가는 기본 틀 */
+.race-card .rc-img{ 
+  position:absolute;inset:0;
+  display:flex;align-items:flex-end;justify-content:center;padding-bottom:18%;
+  font-family:var(--font-mono);font-size:11px;letter-spacing:.15em;
+  
+  background-size:cover !important;
+  background-position:center !important;
+  background-repeat:no-repeat !important;
+}
+
+/* [추가] 이미지 위에 종족별 색감 오버레이를 씌우기 위한 공통 가상 레이어 */
+.race-card .rc-img::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1; /* 이미지 바로 위에 얹어짐 */
+  pointer-events: none;
+}
+
+.race-card .rc-name{position:absolute;left:0;right:0;bottom:0;padding:18px;z-index:3;
+  background:linear-gradient(0deg,rgba(4,16,31,.95) 30%,transparent);}
+.race-card .rc-name b{display:block;font-family:var(--font-disp);font-size:22px;letter-spacing:.18em;color:#fff;}
+.race-card .rc-name span{font-family:var(--font-kr);font-size:14px;color:rgba(255,255,255,.85);}
+.race-card .rc-name small{display:block;font-family:var(--font-mono);font-size:10px;letter-spacing:.2em;margin-top:4px;opacity:.7;}
+
+/* =========================================================================
+   [수정] 가상 요소(::after)를 활용한 종족별 그라데이션 오버레이 강제 적용
+   ========================================================================= */
+
+/* 1. 인어족 (mermaid / Mermaid) */
+.race-card.mermaid .rc-img::after {
+  background: linear-gradient(160deg, rgba(43,127,184,0.45), rgba(12,58,94,0.75)) !important;
+}
+
+/* 2. 인간 (human / Human) */
+.race-card.human .rc-img::after {
+  background: linear-gradient(160deg, rgba(223,238,244,0.3), rgba(159,185,198,0.6)) !important;
+}
+.race-card.human .rc-name b, .race-card.human .rc-name span,
+.race-card.Human .rc-name b, .race-card.Human .rc-name span {color:#fff;}
+
+/* 3. 타이드족 (tide / tideborn / Tide / Tideborn 모두 방어) */
+.race-card.tideborn .rc-img::after {
+  background: linear-gradient(160deg, rgba(178,58,74,0.45), rgba(94,19,32,0.8)) !important;
+}
+
+/* 위치별 변형 스타일 유지 */
+.race-card.pos-center{transform:translate(-50%,-50%) translateZ(60px) scale(1);opacity:1;filter:none;z-index:20;}
+.race-card.pos-left{transform:translate(-128%,-50%) translateZ(-160px) rotateY(34deg) scale(.74);opacity:.55;filter:saturate(.7) brightness(.8);z-index:10;}
+.race-card.pos-right{transform:translate(28%,-50%) translateZ(-160px) rotateY(-34deg) scale(.74);opacity:.55;filter:saturate(.7) brightness(.8);z-index:10;}
+
+.carousel-hint{text-align:center;font-family:var(--font-mono);font-size:11px;letter-spacing:.2em;color:rgba(234,246,251,.6);margin-top:6px;}
+.carousel-nav{position:absolute;top:50%;transform:translateY(-50%);z-index:25;font-size:28px;color:rgba(234,246,251,.7);padding:10px;}
+.carousel-nav.prev{left:4px;}.carousel-nav.next{right:4px;}
+
+/* ---------- 캐릭터 탭 : 학생증 로스터(3:4) ---------- */
+.roster{position:absolute;inset:0;background:var(--deep);z-index:40;transform:translateY(100%);transition:transform .5s cubic-bezier(.4,0,.2,1);overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.roster.open{transform:translateY(0);}
+.roster-top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:14px;padding:18px 18px 14px;background:linear-gradient(180deg,var(--deep),rgba(6,24,46,.85));backdrop-filter:blur(4px);}
+.roster-back{font-family:var(--font-mono);font-size:13px;letter-spacing:.2em;color:var(--aqua);}
+.roster-title{font-family:var(--font-disp);font-size:20px;letter-spacing:.2em;}
+.roster-title .kr{font-family:var(--font-kr);font-size:.62em;margin-left:.5em;opacity:.7;}
+.id-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;padding:6px 18px 40px;}
+@media(min-width:560px){.id-grid{grid-template-columns:repeat(3,1fr);}}
+/* 학생증 카드 : 3:4 비율 */
+.id-card{
+  position:relative;border-radius:12px;overflow:hidden;cursor:pointer;
+  background:linear-gradient(165deg,#0f3354,#082238);border:1px solid rgba(234,246,251,.16);
+  box-shadow:var(--shadow-soft);transition:transform .25s,box-shadow .25s;
+}
+.id-card:active{transform:scale(.97);}
+.id-card .photo{ /* 3:4 증명사진 자리 */
+  aspect-ratio:3/4;display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;color:rgba(234,246,251,.4);
+  background:
+    repeating-linear-gradient(45deg,rgba(255,255,255,.03) 0 10px,transparent 10px 20px),
+    linear-gradient(160deg,#13456e,#0a2840);
+  background-size:cover;background-position:center;
+}
+.id-card .meta{padding:9px 11px 12px;border-top:1px solid rgba(234,246,251,.1);}
+.id-card .meta .grade{font-family:var(--font-mono);font-size:10px;letter-spacing:.18em;color:var(--aqua);}
+.id-card .meta .nm{font-family:var(--font-kr);font-weight:700;font-size:16px;color:var(--foam);margin-top:2px;}
+.id-card .strip{position:absolute;left:0;top:0;width:6px;height:100%;}
+/* 종족 컬러 띠 */
+.roster[data-race="mermaid"] .id-card .strip{background:var(--azure);}
+.roster[data-race="human"]   .id-card .strip{background:var(--foam);}
+.roster[data-race="tide"]    .id-card .strip{background:var(--blood);}
+
+/* ---------- 캐릭터 탭 : 상세(스탠딩 + 정보) ---------- */
+.detail{position:absolute;inset:0;z-index:50;background:var(--ink);transform:translateX(100%);transition:transform .5s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;}
+.detail.open{transform:translateX(0);}
+.detail-top{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;}
+.detail-top .back{font-family:var(--font-mono);font-size:13px;letter-spacing:.2em;color:var(--aqua);}
+.detail-body{flex:1;display:flex;gap:0;overflow:hidden;}
+@media(max-width:640px){.detail-body{flex-direction:column;}}
+.standing { /* 왼쪽 캐릭터 스탠딩 자리 */
+  flex: 1.2; /* [추가] 오른쪽 설명창에 비해 왼쪽 스탠딩 공간을 살짝 더 넓게 확보 */
+  position: relative;
+  
+  /* [수정] 최소 높이를 화면 높이의 38%에서 55%로 대폭 상향! 훨씬 길쭉해져 */
+  min-height: 55vh; 
+  
+  display: flex;
+  align-items: flex-end; /* 캐릭터 발끝이 바닥에 딱 붙도록 정렬 */
+  justify-content: center;
+  
+  background: radial-gradient(80% 60% at 50% 100%, rgba(122,215,232,.18), transparent 70%);
+}
+
+/* [수정] 내부 이미지 영역을 부모 크기에 맞춰 최대치로 확장 */
+.standing .slot {
+  width: 100%;       /* 가로 폭을 70% -> 100%로 꽉 채움 */
+  height: 100%;      /* 세로 폭을 90% -> 100%로 꽉 채움 */
+  position: relative;
+  display: flex;
+  align-items: flex-end; /* 이미지 역시 아래쪽을 기준으로 정렬 */
+  justify-content: center;
+  
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: .14em;
+  color: rgba(234,246,251,.4);
+}
+
+/* [추가] 나중에 이 자리에 실제 스탠딩 img 태그를 넣었을 때 찌그러짐 없이 거대하게 키우는 치트키 */
+.standing .slot img {
+  position: absolute;
+  bottom: 0;         /* 바닥에 붙이기 */
+  width: auto;       /* 가로세로 비율 유지 */
+  height: 100%;      /* 높이를 부모 상자 크기에 100% 맞춤 */
+  max-width: 100%;   /* 카드 밖으로 삐져나가지 않도록 제어 */
+  object-fit: contain; /* 잘리는 부분 없이 온전한 스탠딩이 다 나오도록 설정 */
+  z-index: 2;
+}
+.info{flex:1;padding:22px;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.info .nm-en{font-family:var(--font-disp);font-size:30px;letter-spacing:.1em;color:var(--foam);}
+.info .nm-kr{font-family:var(--font-kr);font-weight:700;font-size:20px;color:var(--aqua);margin:2px 0 18px;}
+.info dl{display:grid;grid-template-columns:auto 1fr;gap:10px 16px;margin-bottom:20px;}
+.info dt{font-family:var(--font-mono);font-size:11px;letter-spacing:.18em;color:var(--aqua);align-self:center;}
+.info dd{font-family:var(--font-kr);font-size:15px;color:var(--foam);}
+.info .bio{font-family:var(--font-kr);line-height:1.8;color:rgba(234,246,251,.85);font-size:14px;}
+.info .quote{margin-top:22px;padding:16px 18px;border-left:3px solid var(--blood);
+  font-family:var(--font-kr);font-style:italic;font-size:15px;line-height:1.7;
+  color:var(--foam);background:rgba(198,58,77,.08);}
+.info .quote::before{content:"“";font-family:var(--font-disp);color:var(--blood);}
+
+/* ---------- 세계관 탭 : 위키 목업 ---------- */
+.wiki{padding:0 0 60px;color:var(--ink);}
+.wiki-inner{max-width:760px;margin:0 auto;background:#fbfdfe;min-height:100%;}
+.wiki-head{padding:22px 22px 14px;border-bottom:3px solid var(--blue);}
+.wiki-head h1{font-family:var(--font-disp);font-size:clamp(24px,7vw,34px);color:var(--navy);letter-spacing:.02em;}
+.wiki-head .kr{font-family:var(--font-kr);font-size:15px;color:var(--blue);margin-top:4px;}
+.wiki-head .tagline{font-family:var(--font-mono);font-size:11px;letter-spacing:.1em;color:#5a7488;margin-top:8px;border-bottom:1px solid #dfe8ee;padding-bottom:12px;}
+.wiki-flex{display:flex;gap:20px;padding:18px 22px;}
+@media(max-width:600px){.wiki-flex{flex-direction:column;}}
+.wiki-main{flex:1;min-width:0;}
+/* 인포박스(상단에만 이미지) */
+.infobox{width:240px;flex-shrink:0;border:1px solid #cdd9e1;border-radius:8px;overflow:hidden;font-size:13px;background:#eef4f8;}
+@media(max-width:600px){.infobox{width:100%;}}
+.infobox .ib-title{background:var(--navy);color:#fff;font-family:var(--font-disp);letter-spacing:.1em;text-align:center;padding:10px;font-size:15px;}
+/* 위키 최상단 이미지 틀 설정 */
+.infobox .ib-img {
+  aspect-ratio: 4/3;
+  position: relative; /* 내부 요소들을 절대 위치로 정렬하기 위해 추가 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  overflow: hidden;   /* 이미지가 4:3 틀 밖으로 삐져나가지 않도록 추가 */
+}
+
+/* [추가] 인포박스에 이미지가 들어왔을 때 꽉 채우는 스타일 */
+.infobox .ib-img img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;  /* 4:3 비율에 맞춰 이미지를 찌그러짐 없이 꽉 채움 */
+  z-index: 2;         /* 빗금 배경과 가이드 글자보다 위로 올림 */
+}
+.infobox .ib-cap{padding:8px 10px;font-family:var(--font-kr);color:#566c7a;border-bottom:1px solid #cdd9e1;font-size:12px;}
+.infobox table{width:100%;border-collapse:collapse;}
+.infobox th,.infobox td{padding:7px 10px;text-align:left;border-bottom:1px solid #d7e2e9;font-family:var(--font-kr);vertical-align:top;}
+.infobox th{color:var(--blue);font-weight:700;width:38%;font-size:12px;}
+.infobox td{color:#33414a;}
+/* 목차 */
+.toc{border:1px solid #cdd9e1;background:#eef4f8;display:inline-block;padding:12px 18px 12px 14px;margin-bottom:18px;border-radius:6px;}
+.toc b{font-family:var(--font-kr);font-size:13px;color:var(--navy);display:block;margin-bottom:6px;}
+.toc ol{margin-left:18px;font-family:var(--font-kr);font-size:13px;color:var(--blue);line-height:1.9;}
+.toc a{color:var(--blue);text-decoration:none;}
+/* 본문 */
+.wiki-sec{margin-bottom:22px;}
+.wiki-sec h2{font-family:var(--font-disp);font-size:19px;color:var(--navy);border-bottom:1px solid #cdd9e1;padding-bottom:6px;margin-bottom:10px;letter-spacing:.04em;}
+.wiki-sec h2 .kr{font-family:var(--font-kr);font-size:.7em;color:var(--blue);margin-left:.4em;}
+.wiki-sec p{font-family:var(--font-kr);font-size:14.5px;line-height:1.85;color:#2a3942;margin-bottom:10px;}
+.wiki-sec p .link{color:var(--blue);text-decoration:underline;text-decoration-color:#a9c6da;}
+.wiki-foot{padding:14px 22px;font-family:var(--font-mono);font-size:10px;color:#8aa0ad;letter-spacing:.08em;border-top:1px solid #dfe8ee;}
+
+/* 첫 등장 시 가벼운 글리치 */
+.reveal{animation:revUp .7s ease both;}
+@keyframes revUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+
+<div class="grain"></div>
+<div class="glitch-flash" id="glitchFlash"></div>
+
+<!-- =====================================================================
+     [1] 메인 화면
+     ===================================================================== -->
+<section class="screen active" id="main">
+  <div class="sunrays"></div>
+
+  <div class="main-center">
+    <div class="logo-wrap">
+      <!-- 로고 : 사용자 제공 링크 (실패 시 텍스트 폴백) -->
+      <img src="https://raw.githubusercontent.com/yermigionic-web/luvp4/refs/heads/main/logo.png"
+           alt="LUVP4" onerror="this.style.display='none';document.getElementById('logoFb').style.display='block';">
+      <div class="logo-fallback" id="logoFb">LUVP4<small>LOREM IPSUM</small></div>
+    </div>
+    <button class="start-btn" id="startBtn"><span>START</span></button>
+  </div>
+
+  <!-- 하단 파도 : 푸른 물결 + 흰 거품 -->
+  <div class="waves">
+    <svg viewBox="0 0 1200 200" preserveAspectRatio="none">
+      <!-- 각 path는 1200폭을 3번 반복(translateX -33.33%로 무한 스크롤) -->
+      <path class="wave-layer wl1" d="M0,110 C150,70 350,150 600,110 C850,70 1050,150 1200,110 L1200,200 L0,200 Z M1200,110 C1350,70 1550,150 1800,110 C2050,70 2250,150 2400,110 L2400,200 L1200,200 Z"/>
+      <path class="wave-layer wl2" d="M0,130 C200,95 400,165 600,130 C800,95 1000,165 1200,130 L1200,200 L0,200 Z M1200,130 C1400,95 1600,165 1800,130 C2000,95 2200,165 2400,130 L2400,200 L1200,200 Z"/>
+      <path class="wave-layer wl3" d="M0,150 C180,125 380,180 600,150 C820,120 1020,180 1200,150 L1200,200 L0,200 Z M1200,150 C1380,125 1580,180 1800,150 C2020,120 2220,180 2400,150 L2400,200 L1200,200 Z"/>
+      <path class="wave-layer foam" d="M0,148 C160,138 360,162 600,150 C840,138 1040,162 1200,150 L1200,158 C1040,170 840,146 600,158 C360,170 160,146 0,156 Z M1200,148 C1360,138 1560,162 1800,150 C2040,138 2240,162 2400,150 L2400,158 C2240,170 2040,146 1800,158 C1560,170 1360,146 1200,156 Z"/>
+    </svg>
+  </div>
+</section>
+
+<!-- 스타트 전환용 차오르는 파도 + 암전 -->
+<div class="wave-rise" id="waveRise">
+  <svg class="crest" viewBox="0 0 1200 60" preserveAspectRatio="none">
+    <path d="M0,40 C200,10 400,55 600,35 C800,15 1000,55 1200,35 L1200,60 L0,60 Z M1200,40 C1400,10 1600,55 1800,35 C2000,15 2200,55 2400,35 L2400,60 L1200,60 Z"/>
+  </svg>
+</div>
+<div class="black-fade" id="blackFade"></div>
+
+<!-- 배경음악 : 사용자 제공 링크 -->
+<audio id="bgm" loop preload="auto" src="https://github.com/yermigionic-web/luvp4/raw/refs/heads/main/luvp4bgm.mp3"></audio>
+
+<!-- =====================================================================
+     [2-a] 스토리 — 뉴스 데스크 목업
+     ===================================================================== -->
+<section class="screen" id="story">
+  <div class="news-screen">
+    <img src="https://raw.githubusercontent.com/yermigionic-web/luvp4/refs/heads/main/news.png">
+  </div>
+  <div class="news-deck">
+    <span class="news-skip" id="newsSkip">눌러서 넘기기 ▸</span>
+    <span class="news-tag">BREAKING</span>
+    <div class="news-box in" id="newsBox">
+      <div class="headline" id="newsHead"></div>
+      <div class="sub" id="newsSub"></div>
+    </div>
+    <div class="news-progress" id="newsProg"></div>
+  </div>
+</section>
+
+<!-- =====================================================================
+     [2-b] 스토리 — 쇼트 애니메이션
+     ===================================================================== -->
+<section class="screen" id="anim">
+  <div class="anim-stage" id="animStage">
+    <!-- 프레임은 JS가 동적 생성 (전반 7장 + 후반 9쌍).
+         각 .slot 자리에 github 이미지를 background-image/img로 교체하면 됩니다. -->
+  </div>
+
+  <!-- 스킵 확인 팝업 (테마: 청량 + 핏빛 글리치) -->
+  <div class="modal" id="skipModal">
+    <div class="modal-card">
+      <div class="modal-title" data-text="SKIP">SKIP</div>
+      <p class="modal-q">애니메이션을 스킵하시겠습니까?</p>
+      <div class="modal-btns">
+        <button class="m-btn yes" id="skipYes"><span>예</span><small>SKIP</small></button>
+        <button class="m-btn no"  id="skipNo"><span>아니오</span><small>CONTINUE</small></button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =====================================================================
+     [3] 코덱스 : 캐릭터 + 세계관
+     ===================================================================== -->
+<section class="screen" id="codex">
+  <div class="beach-rays"></div>
+
+  <!-- 책갈피 탭 -->
+  <div class="bookmarks">
+    <button class="bm active" data-tab="chars">CHARACTERS<span class="kr">캐릭터</span></button>
+    <button class="bm" data-tab="world">CODEX<span class="kr">세계관</span></button>
+  </div>
+
+  <div class="codex-inner">
+    <div class="tabview">
+
+      <!-- ===== 캐릭터 탭 ===== -->
+      <div class="tabpane active" id="pane-chars">
+        <div class="codex-head">
+          <div class="eyebrow">CLASS INFORMATION</div>
+          <h1>SPECIES<span class="kr">종족을 선택해 열람하기</span></h1>
+        </div>
+        <div class="carousel" id="carousel"></div>
+        <div class="carousel-hint" id="carHint">◂ 좌우로 돌려 종족을 선택 ▸ &nbsp; (탭하면 입장)</div>
+        <button class="carousel-nav prev" id="carPrev">‹</button>
+        <button class="carousel-nav next" id="carNext">›</button>
+
+        <!-- 로스터(학생증) -->
+        <div class="roster" id="roster">
+          <div class="roster-top">
+            <button class="roster-back" id="rosterBack">‹ BACK</button>
+            <div class="roster-title" id="rosterTitle"></div>
+          </div>
+          <div class="id-grid" id="idGrid"></div>
+        </div>
+
+        <!-- 상세 -->
+        <div class="detail" id="detail">
+          <div class="detail-top">
+            <button class="back" id="detailBack">‹ ROSTER</button>
+            <span style="font-family:var(--font-mono);font-size:11px;letter-spacing:.2em;opacity:.6;">PROFILE</span>
+          </div>
+          <div class="detail-body">
+            <div class="standing">
+              <!-- >>> IMAGE: 캐릭터 스탠딩 일러스트 자리 <<< -->
+              <div class="slot" id="detailStanding">[ CHARACTER<br>STANDING ]</div>
+            </div>
+            <div class="info" id="detailInfo"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== 세계관 탭 ===== -->
+      <div class="tabpane" id="pane-world">
+        <div class="wiki">
+          <div class="wiki-inner" id="wiki"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- =====================================================================
+     데이터 (JSON) — 빈 텍스트는 lorem ipsum 계열로 채움.
+     이름/정보 등은 placeholder이며 자유롭게 교체하세요.
+     ===================================================================== -->
+<script type="application/json" id="gameData">
+{
+  "story": [
+    {"head":"지난 금요일, 후경의 국왕이 회견 가운데 인어에 대한 의원들과의 논의 결과에 대해 언급했습니다.","sub":"CULTURAL · 09:14 LIVE"},
+    {"head":"여러 차례 조사를 감행한 결과, \"인어의 비늘에는 유역의 계약을 풀 수 있는 효과가 있다\"고 합니다.","sub":"CULTURAL · 09:14 LIVE"},
+    {"head":"현재 인어들에 대한 국가의 보호는 절대적이므로 추가적인 피해는 없을 것으로 예상되나, 효과에 대한 신뢰는 미비한 상태입니다.","sub":"CULTURAL · 09:15 LIVE"},
+    {"head":"한편 오늘 새벽, 통신이 끊긴 유역섬에서 신호 하나가 잡혔습니다.","sub":"GENERAL · SIGNAL ▒▒"}
+  ],
+  "races":[
+    {
+      "id":"mermaid","en":"MERMAID","kr":"인어","tag":"THE TIDE SINGERS",
+      "chars":[
+        {"en":"Hara Kim","kr":"김하라","grade":"1학년","gender":"여","age":"17",
+        "img":"hara",
+         "bio":"경원고등학교의 성실한 1학년생. 어쩐지 볼에 보랏빛이 돈다. 비 오는 날이면 항상 야경을 보고 있다.",
+         "quote":"노트 보여줄게. 대신 나 맛있는 거 사 줘야 해. 주는 게 있으면 받는 것도 있는 거야."},
+        {"en":"Eehu Lee","kr":"이이후","grade":"교외 인물","gender":"남","age":"16",
+        "img":"eehu",
+         "bio":"골동품점에서 자주 발견되는 의문의 소년. 보이는 것과 다르게 꽤 친절하지만, 소심하다. 친해지려면 오랜 시간이 걸릴 것 같아.",
+         "quote":"……혹시 서머 아미보, 아, 죄송해요. 당근인 줄 알았어요."}
+      ]
+    },
+    {
+      "id":"human","en":"HUMAN","kr":"인간","tag":"THE SHOREBOUND",
+      "chars":[
+        {"en":"Sikyung Lee","kr":"이시경","grade":"1학년","gender":"여","age":"17",
+        "img":"sikyung",
+         "bio":"만사에 싸늘한 1학년생. 성적에 비해 즉흥적이고 행동파적인 면이 있다. 유역자를 진심으로 혐오하는 듯.",
+         "quote":"회 먹으러 가자며. ……거기 인어 픽 맛집이라고? 그딴 것도 있어? 관심 없는데."},
+        {"en":"Hanee Min","kr":"민하늬","grade":"1학년","gender":"여","age":"17",
+        "img":"hanee",
+         "bio":"드라마와 잼얘를 추구하는 1학년생. 미디어의 유역자 주입에 이상향이 생겨버렸다. 연애 얘기에만 귀가 밝은 데 반해, 은근히 친구들을 잘 챙기는 듯하다.",
+         "quote":"유역쟈 없냐 유역쟈? …뭐? 3반에 걔가 시비 걸었어? 야 죽여버려."},
+        {"en":"Sungmin Kim","kr":"김성민","grade":"2학년","gender":"여","age":"18",
+        "img":"sungmin",
+         "bio":"항상 후드를 뒤집어쓰고 혼자 앉아있는 2학년생. 친구라기보다… 대화하는 사람조차 있는지 의심스럽다. 어쩐지 옥상을 자주 들락날락하는 것 같은데.",
+         "quote":"…………왜?"},
+        {"en":"Zion Park","kr":"박지온","grade":"2학년","gender":"여","age":"18",
+        "img":"zion",
+         "bio":"교내 최대 해운 기업가의 외동딸. 현실 감각이 다소 떨어지는 것 같다… 그러나 그런 것에 비해 굉장히 여유롭다.",
+         "quote":"'아니요'라고 했어? 믿을 수가 없네……."},
+        {"en":"Juwon Nam","kr":"남주원","grade":"1학년","gender":"남","age":"17",
+        "img":"juwon",
+         "bio":"친절한 1학년의 모범생. 관찰과 분석을 좋아하여 이과 과목에 강하다. 가끔 위험을 너무 감수해서 유역자 의심을 받기도….",
+         "quote":"…어? 아니, 창밖 보고 있었어. 뭐 알려달라고? …근데 넌 이것도 알아서 못 해?"}
+      ]
+    },
+    {
+      "id":"tide","en":"TIDEBORN","kr":"유역자","tag":"TIDE BRINGERS",
+      "chars":[
+        {"en":"Wojoon Ko","kr":"고우준","grade":"2학년","gender":"남","age":"18",
+        "img":"wojoon",
+         "bio":"유역자들에 대해서도 배타적이고, 인어를 챙기는 이 시대의 귀한 비혐오자! 인데 이 프로필 문서를 열었으면 아시겠다시피 개 구라고 미끼이다. 넘어갈지 말지는 당신 마음.",
+         "quote":"나서서 반대하지 않으면 아무것도 제대로 돌아가지 않으니까. 이건 모든 종을 위한 일이야."},
+        {"en":"Yoonsun Yoon","kr":"윤윤선","grade":"2학년","gender":"여","age":"18",
+        "img":"yoonsun",
+         "bio":"하나의 결정을 할 때도 두 번, 세 번 점검해야 하는 신중파. 날카로운 유머들에 비해 실제 성격은 건조한 모양이다. 항상 무언가 고민하고 있다.",
+         "quote":"돌아온 게 아니야. 그냥… 밀려온 거지."}
+      ]
+    }
+  ],
+  "world":[
+    {"id":"s1","en":"Overview","kr":"개요",
+     "p":["<b>후경</b>(後景/Haikolu)은 근미래 유럽풍의 건물들과, 희고 푸른 건물들이 자랑인 <span class='link'>남부 국가</span>이다.","우리 세상에 공공연히 존재하는 세 종족, <span class='link'>인어</span>·인간·<span class='link'>유역자</span>가 전부 자유롭게 생활할 수 있도록 포용하고 있다."]},
+    {"id":"s2","en":"Mermaid","kr":"인어",
+     "p":["인간과 같은 시기에 발전을 시작했으나, 수중 생활을 겸용할 수 있도록 진화된 종족.","인간 수명은 인간보다 10배가 넘어가는 장생종이지만, 주기적으로 반복되는 <span class='link'>인어 사냥</span>의 문화에 의해 생멸 시기가 짧은 편이다.","대다수의 인어들은 종족의 공개를 원하지 않으며, 한 혈통의 인어들은 전부 외모가 비슷하여 한 명이 발각될 시 모두를 식별할 수 있게 된다는 약점을 지닌다.","강한 해독 효과와 나이가 들수록 튼튼해지는 피부를 소유했으나, 인간들은 <b>그것마저 뚫고 인어를 살해하는 도구</b>를 개발했다."]},
+    {"id":"s3","en":"Society","kr":"사회",
+     "p":["실권을 가진 왕과 총리 대신이 공동 통치하는, 입헌군주제의 변형 정치 체제를 지니고 있다. <span class='link'>삼권분립</span>과 유사하다.","인간은 모든 공직에 정식 참여하며, 투표권도 제공받는다. 인어는 신분을 숨기지 않으면 사실상 활동이 불가능. 유역자들은 어느 정도의 제약을 갖고 참여가 가능하며, 그럼에도 사회적인 경계의 시선으로 암묵적 차단되는 상황."]},
+    {"id":"s4","en":"Tideborn","kr":"유역자",
+     "p":["인간과 매우 유사하게 보이나, 본질적으로는 다른 생태를 타고난 존재. <span class='link'>유역의 계약</span>을 통해 발생하며, 요컨대 2개의 각기 다른 가정에서 <span class='link'>밝혀지지 않은 절대 존재</span>에게 자신의 영혼을 증여하고 자살할 시 그 집안의 모든 혈통은 유역자가 된다.","최초의 증여자들은 부활하며, 그 이후의 모든 유역자들은 인간과 동일한 신체와 수명을 갖되 합리적 사고능력 및 전체적인 지능이 비약적으로 상승한다. 본인에게 해가 될 만한 행동, 비합리적인 행동은 종족적으로 불가능.","<span class='link'>유역섬</span>에서 집단 생활을 하며, 해당 가문들 이외의 사람과 친교 이상의 관계를 갖는 것은 금지된다. 결혼은 괜찮지만, 아이를 낳으면 살해된다."]},
+    {"id":"s5","en":"Den of Mermaids","kr":"인어굴",
+     "p":["인어들이 거주하는 해양 100m 아래의 굴. 명칭은 '인어굴'이지만, 해저 아파트에 가깝게 넓으며 극도로 발전한 기술력이 특징.","대체로 여러 인어 집안이 합의를 맺어 근해/먼바다에 함께 거주하나, 한 명이 들키면 전원 몰살될 수 있기에 독립적으로 인어굴을 이용하는 가문들도 존재하기는 한다. 근해도 단점이 있고, 먼바다도 단점이 있고, 독립 거주도 단점이 있고, 집단 거주도 단점이 있다는 것이 특징"]},
+    {"id":"s6","en":"Watershed Island","kr":"유역섬",
+     "p":["유역자들이 거주하는 근해안의 섬. 대체로 후경, 혹은 유역자가 존재하는 어느 나라든 근해안에 위치하고 있다. 주위로 시야를 차단하다시피 건물이 덮인 섬이며, 날이 좋은 날에는 관측할 수도 있다.","내부 시설은 현대 사회와 동일하지만, 특정 가문들만 모여 사는 것이기 때문에 폐쇄 사회가 되기 쉽다는 것이 특징. 현재까지 단독 거주 가문을 가진 유역섬은 확인되지 않았다."]},
+    {"id":"s7","en":"Kyungwon High School","kr":"경원고등학교",
+     "p":["후경에서 제일 큰 고등학교. 암암리에 유역자, 인어, 인간이 공존하고 있다고 알려져 있다. 그러나 아무도 서로에게 종족을 묻지 않는 것이 암묵적인 예의. <em>가십으로는 존재하는 듯하지만 그것은 학생들의 영역이므로 작성하지 않는다.</em>","여타 고등학교들과 마찬가지로 '종족 화합'을 교훈으로 삼고 있지만, 인어·유역자 혐오가 공공연하며 부모의 지위가 높을수록 위계 상층에 올라가는 악습을 가진다."]}
+  ]
+}
+</script>
+
+<script>
+/* =========================================================================
+   엔진
+   ========================================================================= */
+const DATA = JSON.parse(document.getElementById('gameData').textContent);
+const $ = (s,el=document)=>el.querySelector(s);
+const $$ = (s,el=document)=>[...el.querySelectorAll(s)];
+
+function showScreen(id){
+  $$('.screen').forEach(s=>s.classList.remove('active'));
+  $('#'+id).classList.add('active');
+}
+
+/* 가끔 핏빛 글리치 플래시 */
+const gflash = $('#glitchFlash');
+function pulseGlitch(){
+  gflash.classList.add('on');
+  setTimeout(()=>gflash.classList.remove('on'),450);
+}
+setInterval(()=>{ if(Math.random()<0.5) pulseGlitch(); }, 6500);
+
+/* ---------- [1] 메인 → 스타트 전환 ---------- */
+const bgm = $('#bgm');
+$('#startBtn').addEventListener('click', ()=>{
+  bgm.volume = 0.0;
+  bgm.play().then(()=>{ // 부드럽게 페이드 인
+    let v=0; const f=setInterval(()=>{ v=Math.min(0.7,v+0.05); bgm.volume=v; if(v>=0.7)clearInterval(f); },120);
+  }).catch(()=>{});
+  $('#waveRise').classList.add('go');   // 파도 차오름 + 하단 붉게
+  $('#blackFade').classList.add('go');  // 암전
+  setTimeout(()=>{ startStory(); }, 2700);
+});
+
+/* ---------- [2-a] 뉴스 데스크 ---------- */
+let storyIdx = 0, storyTimer = null;
+function startStory(){
+  showScreen('story');
+  // 암전 오버레이 정리
+  $('#blackFade').classList.remove('go'); $('#blackFade').style.opacity=0;
+  $('#waveRise').classList.remove('go'); $('#waveRise').style.height=0;
+  storyIdx = 0; renderNews();
+}
+function renderNews(){
+  const item = DATA.story[storyIdx];
+  $('#newsHead').textContent = item.head;
+  $('#newsSub').textContent  = item.sub;
+  const box=$('#newsBox'); box.classList.remove('in'); void box.offsetWidth; box.classList.add('in');
+  const prog=$('#newsProg'); prog.classList.remove('run'); void prog.offsetWidth; prog.classList.add('run');
+  if(Math.random()<0.7) pulseGlitch();
+  clearTimeout(storyTimer);
+  storyTimer = setTimeout(nextNews, 4000); // 4초 자동 스킵
+}
+function nextNews(){
+  storyIdx++;
+  if(storyIdx >= DATA.story.length){ clearTimeout(storyTimer); startAnim(); return; }
+  renderNews();
+}
+$('#story').addEventListener('click', nextNews); // 터치 스킵
+
+/* ---------- [2-b] 쇼트 애니메이션 ---------- */
+/* 전반 7장(각 3초, 라이트레이) + 후반 9쌍(각 5초, 일상→비일상 글리치) */
+const HERO_COUNT = 7;     // 전반 이미지 수
+const PAIR_COUNT = 9;     // 후반 쌍 수 (총 18장)
+const HERO_DUR = 3000;
+const PAIR_DUR = 5000;
+
+function startAnim(){
+  showScreen('anim');
+  const stage = $('#animStage'); stage.innerHTML='';
+  
+  // 깃허브 이미지 저장소의 기본 주소 (중복을 줄이기 위해 변수로 분리)
+  const baseUrl = "https://raw.githubusercontent.com/yermigionic-web/luvp4/refs/heads/main/";
+  
+  // 1. 쇼트 전반 (HERO) 프레임 생성 - 총 7장
+  for(let i=0;i<HERO_COUNT;i++){
+    const f=document.createElement('div');
+    f.className='frame hero';
+    f.innerHTML=`<div class="rays"></div>
+      <img src="${baseUrl}hero${i+1}.png" class="slot-img" alt="Hero ${i+1}" />
+      <div class="slot">[ FRAME ${i+1} ]</div>`;
+    stage.appendChild(f);
+  }
+  
+  // 2. 일상/비일상 (PAIR) 프레임 생성 - 총 9장
+  for(let i=0;i<PAIR_COUNT;i++){
+    const f=document.createElement('div');
+    f.className='frame pairframe';
+    f.innerHTML=`<div class="pair">
+        <div class="daily">
+          <img src="${baseUrl}daily${i+1}.png" class="slot-img" alt="Daily ${i+1}" />
+          <div class="slot" style="position:absolute;inset:6%;">[ DAILY ${i+1} ]</div>
+        </div>
+        <div class="uncanny">
+          <img src="${baseUrl}uncanny${i+1}.png" class="slot-img" alt="Uncanny ${i+1}" />
+          <div class="slot" style="position:absolute;inset:6%;border-color:rgba(255,45,68,.4);color:rgba(255,45,68,.6);">[ UNCANNY ${i+1} ]</div>
+        </div>
+      </div>`;
+    stage.appendChild(f);
+  }
+  playSequence(0);
+}
+let seqTimer=null, seqIdx=0, seqStart=0, seqRemaining=0, seqPaused=false;
+function playSequence(n){
+  const frames = $$('#animStage .frame');
+  if(n >= frames.length){ endAnimWithWave(); return; }
+  seqIdx = n;
+  const f = frames[n];
+  f.classList.add('show');
+  let dur = HERO_DUR;
+  if(f.classList.contains('pairframe')){
+    $('.pair',f).classList.add('run');
+    if(Math.random()<0.8) pulseGlitch();
+    dur = PAIR_DUR;
+  }
+  startSeqTimer(dur);
+}
+function startSeqTimer(ms){
+  seqStart = Date.now(); seqRemaining = ms;
+  clearTimeout(seqTimer);
+  seqTimer = setTimeout(()=>{
+    const frames = $$('#animStage .frame');
+    if(frames[seqIdx]) frames[seqIdx].classList.remove('show');
+    playSequence(seqIdx+1);
+  }, ms);
+}
+function pauseSeq(){
+  if(seqPaused) return; seqPaused=true;
+  clearTimeout(seqTimer);
+  seqRemaining = Math.max(0, seqRemaining - (Date.now()-seqStart));
+  $('#animStage').classList.add('paused');
+}
+function resumeSeq(){
+  if(!seqPaused) return; seqPaused=false;
+  $('#animStage').classList.remove('paused');
+  startSeqTimer(seqRemaining);
+}
+
+/* 탭 → 스킵 확인 팝업 (애니메이션은 멈춤) */
+const skipModal = $('#skipModal');
+$('#animStage').addEventListener('click', ()=>{
+  if(animEnded || skipModal.classList.contains('open')) return;
+  pauseSeq();
+  skipModal.classList.add('open');
+  pulseGlitch();
+});
+$('#skipYes').addEventListener('click', ()=>{ skipModal.classList.remove('open'); endAnimWithWave(); });
+$('#skipNo').addEventListener('click', ()=>{ skipModal.classList.remove('open'); resumeSeq(); });
+
+/* ---------- 애니메이션 종료 : 파도 이펙트 한 번 더 → 코덱스 ---------- */
+let animEnded=false;
+function endAnimWithWave(){
+  if(animEnded) return; animEnded=true;
+  $('#waveRise').style.height=0;
+  $('#waveRise').classList.remove('go'); void $('#waveRise').offsetWidth;
+  $('#waveRise').classList.add('go');
+  setTimeout(()=>{
+    showScreen('codex');
+    $('#waveRise').classList.remove('go'); $('#waveRise').style.height=0;
+    buildCodex();
+  }, 1500);
+}
+
+/* =========================================================================
+   [3] 코덱스 빌드
+   ========================================================================= */
+let codexBuilt=false;
+function buildCodex(){
+  if(codexBuilt) return; codexBuilt=true;
+  buildCarousel();
+  buildWiki();
+}
+
+/* ----- 탭 전환 ----- */
+$$('.bm').forEach(b=>b.addEventListener('click',()=>{
+  $$('.bm').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');
+  const t=b.dataset.tab;
+  $$('.tabpane').forEach(p=>p.classList.remove('active'));
+  $('#pane-'+(t==='chars'?'chars':'world')).classList.add('active');
+}));
+
+/* ----- 종족 캐러셀 ----- */
+let raceCenter=0;
+function buildCarousel(){
+  const c=$('#carousel'); c.innerHTML='';
+  
+  // 깃허브 이미지 저장소의 기본 주소
+  const baseUrl = "https://raw.githubusercontent.com/yermigionic-web/luvp4/refs/heads/main/";
+
+  DATA.races.forEach((r,i)=>{
+    const card=document.createElement('div');
+    card.className='race-card '+r.id; // 기존 클래스명(tide 등) 유지
+    card.dataset.idx=i;
+    
+    // [핵심 수정] 기본적으로는 소문자 id를 쓰되, 'tide'일 때만 파일명을 'tideborn'으로 교체!
+    let fileName = r.id.toLowerCase();
+    if (fileName === 'tide') {
+      fileName = 'tideborn';
+    }
+    
+    card.innerHTML=`
+      <div class="rc-img" style="background-image: url('${baseUrl}${fileName}.png');"></div>
+      <div class="rc-name">
+        <b>${r.en}</b>
+        <span>${r.kr}</span>
+        <small>${r.tag} · ${r.chars.length} CHARACTERS</small>
+      </div>`;
+      
+    card.addEventListener('click',()=>{
+      if(i===raceCenter) openRoster(i); else { raceCenter=i; layoutCarousel(); }
+    });
+    c.appendChild(card);
+  });
+  layoutCarousel();
+}
+function layoutCarousel(){
+  const cards=$$('#carousel .race-card');
+  const n=cards.length;
+  cards.forEach((card,i)=>{
+    card.classList.remove('pos-center','pos-left','pos-right');
+    if(i===raceCenter) card.classList.add('pos-center');
+    else if(i===(raceCenter-1+n)%n) card.classList.add('pos-left');
+    else card.classList.add('pos-right');
+  });
+}
+$('#carPrev').addEventListener('click',()=>{ raceCenter=(raceCenter-1+DATA.races.length)%DATA.races.length; layoutCarousel(); });
+$('#carNext').addEventListener('click',()=>{ raceCenter=(raceCenter+1)%DATA.races.length; layoutCarousel(); });
+// 휠/스와이프
+let tsx=0;
+$('#carousel').addEventListener('wheel',e=>{ e.preventDefault(); if(e.deltaY>0)$('#carNext').click(); else $('#carPrev').click(); },{passive:false});
+$('#carousel').addEventListener('touchstart',e=>{ tsx=e.touches[0].clientX; },{passive:true});
+$('#carousel').addEventListener('touchend',e=>{ const dx=e.changedTouches[0].clientX-tsx; if(Math.abs(dx)>40){ dx<0?$('#carNext').click():$('#carPrev').click(); } });
+
+/* ----- 학생증 로스터 ----- */
+function openRoster(raceIdx){
+  const r=DATA.races[raceIdx];
+  const grid=$('#idGrid'); grid.innerHTML='';
+  $('#roster').dataset.race=r.id;
+  $('#rosterTitle').innerHTML=`${r.en}<span class="kr">${r.kr}</span>`;
+  r.chars.forEach((ch,ci)=>{
+    const card=document.createElement('div');
+    card.className='id-card reveal';
+    card.style.animationDelay=(ci*0.06)+'s';
+    card.innerHTML=`
+      <span class="strip"></span>
+      <!-- >>> IMAGE: ${ch.kr} 3:4 증명사진 <<< -->
+      <div class="photo" style="background-image:url('https://raw.githubusercontent.com/yermigionic-web/luvp4/refs/heads/main/${ch.img}profile.png')"></div>
+      <div class="meta"><div class="grade">${ch.grade}</div><div class="nm">${ch.kr}</div></div>`;
+    card.addEventListener('click',()=>openDetail(raceIdx,ci));
+    grid.appendChild(card);
+  });
+  $('#roster').classList.add('open');
+}
+$('#rosterBack').addEventListener('click',()=>$('#roster').classList.remove('open'));
+
+/* ----- 상세 ----- */
+function openDetail(raceIdx,ci){
+  const ch=DATA.races[raceIdx].chars[ci];
+  $('#detailStanding').innerHTML=`<img src="https://raw.githubusercontent.com/yermigionic-web/luvp4/refs/heads/main/${ch.img}standing.png" alt="${ch.en}" style="max-width:100%;max-height:100%;object-fit:contain;">`;
+  $('#detailInfo').innerHTML=`
+    <div class="nm-en">${ch.en}</div>
+    <div class="nm-kr">${ch.kr}</div>
+    <dl>
+      <dt>GENDER</dt><dd>${ch.gender}</dd>
+      <dt>AGE</dt><dd>${ch.age}</dd>
+      <dt>GRADE</dt><dd>${ch.grade}</dd>
+    </dl>
+    <div class="bio">${ch.bio}</div>
+    <div class="quote">${ch.quote}”</div>`;
+  $('#detail').classList.add('open');
+  pulseGlitch();
+}
+$('#detailBack').addEventListener('click',()=>$('#detail').classList.remove('open'));
+
+/* ----- 세계관 위키 ----- */
+function buildWiki(){
+  const w=$('#wiki');
+  const toc=DATA.world.map((s,i)=>`<li><a href="#${s.id}">${s.kr} <em style="opacity:.6">${s.en}</em></a></li>`).join('');
+  const secs=DATA.world.map(s=>`
+    <section class="wiki-sec" id="${s.id}">
+      <h2>${s.en}<span class="kr">${s.kr}</span></h2>
+      ${s.p.map(p=>`<p>${p}</p>`).join('')}
+    </section>`).join('');
+  w.innerHTML=`
+    <div class="wiki-head">
+      <h1>후경</h1>
+      <div class="kr">· 세계관 정보 문서 ·</div>
+      <div class="tagline">From the free encyclopedia of the Haikolu</div>
+    </div>
+    <div class="wiki-flex">
+      <div class="wiki-main">
+        <div class="toc"><b>목차 (Contents)</b><ol>${toc}</ol></div>
+        ${secs}
+      </div>
+      <aside class="infobox">
+        <div class="ib-title">경원고등학교</div>
+        <div class="ib-img"><img src="https://raw.githubusercontent.com/yermigionic-web/luvp4/refs/heads/main/highschool.png"></div>
+        <div class="ib-cap">>경원고(景源高)의 전경.</div>
+        <table>
+          <tr><th>형태</th><td>남녀공학 사립 고등학교</td></tr>
+          <tr><th>인원수</th><td>352명 (학생 301, 교사 41)</td></tr>
+          <tr><th>개교일자</th><td>1920년 8월 8일</td></tr>
+          <tr><th>교훈</th><td>종족의 화합, 후경의 미래</td></tr>
+          <tr><th>특징</th><td>오래된 석조에 가스등이 걸린 외벽과, 최신형 디스플레이로 가득 찬 내부</td></tr>
+        </table>
+      </aside>
+    </div>
+    <div class="wiki-foot">이 문서는 임시(lorem) 데이터로 작성되었습니다 · This page uses placeholder content.</div>`;
+}
+</script>
+</body>
+</html>
